@@ -1,0 +1,25 @@
+[package]
+name = "c4_crawler"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+# [[bin]]
+# name = "c4c"
+# path = "src/main.rs"
+
+[dependencies]
+anyhow = "1.0.71"
+chrono = "0.4.26"
+ethers = "2.0.7"
+ethers-solc = {version = "2.0.7", features = ["project-util"]}
+fantoccini = "0.19.3"
+lazy_static = "1.4.0"
+paris = {version = "1.5.15", features = ["macros"]}
+reqwest = "0.11.18"
+serde = "1.0.164"
+serde_json = "1.0.97"
+thiserror = "1.0.40"
+tokio = { version = "1.28.2", features = ["full"]}
+toml = "0.7.4"
+walkdir = "2.3.3"
