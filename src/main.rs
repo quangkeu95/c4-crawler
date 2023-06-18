@@ -7,13 +7,11 @@ use std::fs;
 use std::path::Path;
 use std::process::Command;
 
-const WEBDRIVER_URL: &'static str = "http://localhost:4444";
-
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     info!("Starting...");
 
-    let all_contests = fetch_all_contests(C4_CONTEST_URI, WEBDRIVER_URL).await?;
+    let all_contests = fetch_all_contests(C4_CONTEST_URI).await?;
 
     let contests_has_repo: Vec<Contest> = all_contests
         .into_iter()
