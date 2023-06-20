@@ -34,7 +34,7 @@ async fn main() -> anyhow::Result<()> {
         info!("Repo name {:?}", repo_uri);
         for contract in all_contracts.iter() {
             info!(
-                "Contract name {:?} with bytecode {:?}",
+                "Contract name {:?} with bytecode {}",
                 contract.name, contract.bytecode
             );
         }

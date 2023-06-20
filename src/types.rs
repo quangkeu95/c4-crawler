@@ -1,5 +1,5 @@
 use serde::Deserialize;
-use std::path::PathBuf;
+use std::{fmt::Display, path::PathBuf};
 
 use chrono::{DateTime, Utc};
 
@@ -25,7 +25,31 @@ pub enum ContestStatus {
 #[derive(Debug, Clone, Default)]
 pub struct Contract {
     pub name: String,
-    pub bytecode: String,
+    pub bytecode: ContractBytecode,
+}
+
+#[derive(Debug, Clone, Default)]
+pub struct ContractBytecode(String);
+
+impl From<String> for ContractBytecode {
+    fn from(value: String) -> Self {
+        ContractBytecode(value)
+    }
+}
+
+impl Display for ContractBytecode {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let data = &self.0;
+        let length_threshold = 20;
+        if data.len() <= length_threshold {
+            return write!(f, "{}", data);
+        }
+
+        let start_chars = &data[..10];
+        let end_chars = &data[data.len() - 10..];
+
+        write!(f, "{}..{}", start_chars, end_chars)
+    }
 }
 
 #[derive(Debug, Clone, Deserialize)]

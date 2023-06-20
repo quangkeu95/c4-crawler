@@ -11,7 +11,7 @@ use std::{
 
 use crate::{
     errors::AppError,
-    types::{Contest, Contract, FoundryConfig},
+    types::{Contest, Contract, ContractBytecode, FoundryConfig},
 };
 use ethers_solc::{
     buildinfo::BuildInfo, output::ProjectCompileOutput, project_util::TempProject,
@@ -172,7 +172,9 @@ where
 
                         result.push(Contract {
                             name: contract_name,
-                            bytecode: bytecode.unwrap_or(&Bytes::new()).to_string(),
+                            bytecode: ContractBytecode::from(
+                                bytecode.unwrap_or(&Bytes::new()).to_string(),
+                            ),
                         })
                     }
                 }
