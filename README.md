@@ -1,19 +1,8 @@
 # Code4rena crawler
 Get all the ongoing and upcoming contests on [code4rena](https://code4rena.com/). Then find all the contracts with their name and bytecode.
 
-## Preparation
-Install `geckodriver` on MacOS:
-```bash
-brew install geckodriver
-```
-
-## Run the script
-Firstly, start the `geckodriver` in other terminal:
-```bash
-geckodriver --port 4444
-```
-
-Then run:
+# Run
+Run the main process:
 ```bash
 cargo run
 ```
