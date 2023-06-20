@@ -1,5 +1,5 @@
 use serde::Deserialize;
-use std::{fmt::Display, path::PathBuf};
+use std::{cmp::Ordering, fmt::Display, path::PathBuf};
 
 use chrono::{DateTime, Utc};
 
@@ -22,13 +22,46 @@ pub enum ContestStatus {
     Upcoming,
 }
 
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone)]
 pub struct Contract {
     pub name: String,
     pub bytecode: ContractBytecode,
+    pub kind: ContractKind,
 }
 
-#[derive(Debug, Clone, Default)]
+impl Contract {
+    pub fn contract_kind(bytecode: &str) -> ContractKind {
+        if bytecode == "0x" {
+            ContractKind::Interface
+        } else {
+            ContractKind::Contract
+        }
+    }
+}
+
+impl PartialOrd for Contract {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        if matches!(self.kind, ContractKind::Interface)
+            && matches!(other.kind, ContractKind::Contract)
+        {
+            Some(Ordering::Less)
+        } else if matches!(self.kind, ContractKind::Interface)
+            && matches!(other.kind, ContractKind::Interface)
+        {
+            Some(Ordering::Equal)
+        } else {
+            Some(Ordering::Greater)
+        }
+    }
+}
+
+impl PartialEq for Contract {
+    fn eq(&self, other: &Self) -> bool {
+        self.kind == other.kind && self.name == other.name && self.bytecode == other.bytecode
+    }
+}
+
+#[derive(Debug, Clone, Default, PartialEq, PartialOrd, Ord, Eq)]
 pub struct ContractBytecode(String);
 
 impl From<String> for ContractBytecode {
@@ -50,6 +83,12 @@ impl Display for ContractBytecode {
 
         write!(f, "{}..{}", start_chars, end_chars)
     }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum ContractKind {
+    Interface,
+    Contract,
 }
 
 #[derive(Debug, Clone, Deserialize)]

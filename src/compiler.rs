@@ -2,6 +2,7 @@ use anyhow::anyhow;
 use ethers::types::Bytes;
 use paris::{error, info};
 use std::{
+    cmp::Ordering,
     env,
     fs::{self, File},
     io::{BufRead, BufReader},
@@ -11,7 +12,7 @@ use std::{
 
 use crate::{
     errors::AppError,
-    types::{Contest, Contract, ContractBytecode, FoundryConfig},
+    types::{Contest, Contract, ContractBytecode, ContractKind, FoundryConfig},
 };
 use ethers_solc::{
     buildinfo::BuildInfo, output::ProjectCompileOutput, project_util::TempProject,
@@ -108,6 +109,10 @@ where
             }
         }
     }
+
+    // sort contracts by type
+    result.sort_by(|a, b| a.partial_cmp(b).unwrap());
+
     Ok(result)
 }
 
@@ -169,12 +174,13 @@ where
                     if let Some(b) = bytecode {
                         let bytecode = b.object.as_bytes();
                         // info!("bytecode {:?}", bytecode);
+                        let bytecode_str = bytecode.unwrap_or(&Bytes::new()).to_string();
+                        let contract_kind = Contract::contract_kind(&bytecode_str);
 
                         result.push(Contract {
                             name: contract_name,
-                            bytecode: ContractBytecode::from(
-                                bytecode.unwrap_or(&Bytes::new()).to_string(),
-                            ),
+                            bytecode: ContractBytecode::from(bytecode_str),
+                            kind: contract_kind,
                         })
                     }
                 }
