@@ -18,8 +18,8 @@ async fn main() -> anyhow::Result<()> {
         .filter(|item| item.repo_uri.is_some())
         .collect();
 
-    let mut result: HashMap<String, Vec<Contract>> = HashMap::new();
-    for contest in contests_has_repo {
+    // let mut result: HashMap<String, Vec<Contract>> = HashMap::new();
+    for mut contest in contests_has_repo {
         let repo_uri = contest.repo_uri.unwrap();
         let repo_dir = clone_or_pull_repo(&repo_uri).map_err(|e| {
             error!("Clone repo error: {e:?}");
@@ -33,13 +33,11 @@ async fn main() -> anyhow::Result<()> {
 
         info!("Repo name {:?}", repo_uri);
         for contract in all_contracts.iter() {
-            info!(
-                "Contract name {:?} with bytecode {}",
-                contract.name, contract.bytecode
-            );
+            info!("Contract {:#?}", contract);
         }
 
-        result.insert(repo_uri, all_contracts);
+        // result.insert(repo_uri, all_contracts);
+        contest.contracts = all_contracts;
     }
 
     // let repo_uri = "https://github.com/code-423n4/2023-05-maia";

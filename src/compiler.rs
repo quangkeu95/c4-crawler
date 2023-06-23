@@ -12,7 +12,7 @@ use std::{
 
 use crate::{
     errors::AppError,
-    types::{Contest, Contract, ContractBytecode, ContractKind, FoundryConfig},
+    types::{Contest, Contract, ContractBytecode, ContractKind, FoundryConfig, RepoUri},
 };
 use ethers_solc::{
     buildinfo::BuildInfo, output::ProjectCompileOutput, project_util::TempProject,
@@ -20,6 +20,10 @@ use ethers_solc::{
     ProjectPathsConfig,
 };
 use walkdir::WalkDir;
+
+use self::contract_resolver::ContractResolver;
+
+pub mod contract_resolver;
 
 pub fn compile<P>(repo_path: P) -> Result<ProjectCompileOutput, AppError>
 where
@@ -43,7 +47,8 @@ where
 /// Clone the repo if it's not cloned, else pull from branch main
 pub fn clone_or_pull_repo(repo_uri: &str) -> Result<PathBuf, AppError> {
     // create directory contains the contest repo
-    let dir_name = Path::new(&repo_uri).file_name().unwrap().to_str().unwrap();
+    let dir_name = RepoUri::from(repo_uri.to_string());
+    let dir_name = dir_name.to_dir_name().unwrap();
     let dir_path = PathBuf::from(env::current_dir().unwrap())
         .join("contests")
         .join(dir_name);
@@ -81,7 +86,6 @@ pub fn find_all_contracts<P>(repo_dir: P) -> Result<Vec<Contract>, AppError>
 where
     P: AsRef<Path>,
 {
-    let mut result: Vec<Contract> = vec![];
     let repo_dir = repo_dir.as_ref().to_path_buf();
     let foundry_config_path = repo_dir.join("foundry.toml");
 
@@ -92,28 +96,39 @@ where
     // trying to build
     forge_build(&repo_dir)?;
 
-    // trying to parse foundry.toml
-    let project_path_config = parse_foundry_config(foundry_config_path)?;
-    let build_dir = project_path_config.artifacts;
+    let project = Project::builder()
+        .paths(
+            ProjectPathsConfig::builder()
+                .root(repo_dir)
+                .build()
+                .unwrap(),
+        )
+        .build()?;
 
-    for entry in WalkDir::new(project_path_config.sources)
-        .into_iter()
-        .filter_map(|entry| entry.ok())
-    {
-        if let Some(file_name) = entry.file_name().to_str() {
-            if file_name.ends_with(".sol") && entry.file_type().is_file() {
-                // parse bytecode from build dir
-                let build_dir = build_dir.join(file_name);
-                let mut c = get_contract(build_dir)?;
-                result.extend(c);
-            }
-        }
-    }
+    let contracts = ContractResolver::get_contracts_from_project(&project).unwrap();
 
-    // sort contracts by type
-    result.sort_by(|a, b| a.partial_cmp(b).unwrap());
+    // // trying to parse foundry.toml
+    // let project_path_config = parse_foundry_config(foundry_config_path)?;
+    // let artifact_dir = project_path_config.artifacts;
 
-    Ok(result)
+    // for entry in WalkDir::new(project_path_config.sources)
+    //     .into_iter()
+    //     .filter_map(|entry| entry.ok())
+    // {
+    //     if let Some(file_name) = entry.file_name().to_str() {
+    //         if file_name.ends_with(".sol") && entry.file_type().is_file() {
+    //             // parse bytecode from build dir
+    //             let artifact_dir = artifact_dir.join(file_name);
+    //             let mut c = get_contract(artifact_dir)?;
+    //             result.extend(c);
+    //         }
+    //     }
+    // }
+
+    // // sort contracts by type
+    // result.sort_by(|a, b| a.partial_cmp(b).unwrap());
+
+    Ok(contracts)
 }
 
 fn forge_build<P>(repo_dir: P) -> Result<(), AppError>
@@ -148,15 +163,15 @@ where
     Ok(())
 }
 
-fn get_contract<P>(build_dir: P) -> Result<Vec<Contract>, AppError>
+fn get_contract<P>(artifact_dir: P) -> Result<Vec<Contract>, AppError>
 where
     P: AsRef<Path>,
 {
     let mut result: Vec<Contract> = vec![];
 
-    let build_dir = build_dir.as_ref().to_path_buf();
-    // info!("Parsing {:?}", build_dir);
-    for entry in WalkDir::new(build_dir)
+    let artifact_dir = artifact_dir.as_ref().to_path_buf();
+    // info!("Parsing {:?}", artifact_dir);
+    for entry in WalkDir::new(artifact_dir)
         .into_iter()
         .filter_map(|entry| entry.ok())
     {
@@ -175,12 +190,14 @@ where
                         let bytecode = b.object.as_bytes();
                         // info!("bytecode {:?}", bytecode);
                         let bytecode_str = bytecode.unwrap_or(&Bytes::new()).to_string();
-                        let contract_kind = Contract::contract_kind(&bytecode_str);
+                        let contract_bytecode = ContractBytecode::from(bytecode_str);
+                        let contract_kind = ContractKind::from(contract_bytecode);
 
                         result.push(Contract {
                             name: contract_name,
-                            bytecode: ContractBytecode::from(bytecode_str),
                             kind: contract_kind,
+                            version: semver::Version::new(1, 0, 0),
+                            imported_contracts: vec![],
                         })
                     }
                 }

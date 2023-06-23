@@ -315,6 +315,9 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "chrono",
+ "claims",
+ "derive_builder",
+ "derive_more",
  "ethers",
  "ethers-solc",
  "failure",
@@ -322,7 +325,9 @@ dependencies = [
  "headless_chrome",
  "lazy_static",
  "paris",
+ "rayon",
  "reqwest",
+ "semver",
  "serde",
  "serde_json",
  "thiserror",
@@ -401,6 +406,15 @@ checksum = "773f3b9af64447d2ce9850330c473515014aa235e6a783b02db81ff39e4a3dad"
 dependencies = [
  "crypto-common",
  "inout",
+]
+
+[[package]]
+name = "claims"
+version = "0.7.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b6995bbe186456c36307f8ea36be3eefe42f49d106896414e18efc4fb2f846b5"
+dependencies = [
+ "autocfg",
 ]
 
 [[package]]
@@ -679,8 +693,10 @@ version = "0.99.17"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "4fb810d30a7c1953f91334de7244731fc3f3c10d7fe163338a35b9f640960321"
 dependencies = [
+ "convert_case",
  "proc-macro2",
  "quote",
+ "rustc_version",
  "syn 1.0.109",
 ]
 
