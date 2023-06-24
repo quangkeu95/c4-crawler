@@ -1,6 +1,6 @@
 use anyhow::anyhow;
 use ethers::types::Bytes;
-use paris::{error, info};
+use rr_logging::{error, info};
 use std::{
     cmp::Ordering,
     env,
@@ -21,46 +21,43 @@ use ethers_solc::{
 };
 use walkdir::WalkDir;
 
-use self::contract_resolver::ContractResolver;
+mod contract;
+pub use contract::*;
+mod project;
+pub use project::*;
 
-pub mod contract_resolver;
+// pub fn compile<P>(repo_path: P) -> Result<ProjectCompileOutput, AppError>
+// where
+//     P: AsRef<Path>,
+// {
+//     let repo_path = repo_path.as_ref().to_path_buf();
+//     let foundry_config_path = repo_path.join("foundry.toml");
 
-pub fn compile<P>(repo_path: P) -> Result<ProjectCompileOutput, AppError>
-where
-    P: AsRef<Path>,
-{
-    let repo_path = repo_path.as_ref().to_path_buf();
-    let foundry_config_path = repo_path.join("foundry.toml");
+//     if !foundry_config_path.exists() {
+//         return Err(AppError::UnknownError(anyhow!("foundry.toml not found")));
+//     }
+//     // trying to parse foundry.toml
+//     let project_path_config = parse_foundry_config(foundry_config_path)?;
+//     info!("Project path config {:?}", project_path_config);
 
-    if !foundry_config_path.exists() {
-        return Err(AppError::UnknownError(anyhow!("foundry.toml not found")));
-    }
-    // trying to parse foundry.toml
-    let project_path_config = parse_foundry_config(foundry_config_path)?;
-    info!("Project path config {:?}", project_path_config);
+//     let project = Project::builder().paths(project_path_config).build()?;
 
-    let project = Project::builder().paths(project_path_config).build()?;
-
-    project.compile().map_err(|e| AppError::from(e))
-}
+//     project.compile().map_err(|e| AppError::from(e))
+// }
 
 /// Clone the repo if it's not cloned, else pull from branch main
 pub fn clone_or_pull_repo(repo_uri: &str) -> Result<PathBuf, AppError> {
     // create directory contains the contest repo
-    let dir_name = RepoUri::from(repo_uri.to_string());
-    let dir_name = dir_name.to_dir_name().unwrap();
-    let dir_path = PathBuf::from(env::current_dir().unwrap())
-        .join("contests")
-        .join(dir_name);
+    let repo_dir = project_dir_from_uri(repo_uri);
 
-    info!("Creating directory if not existed: {:?}", dir_path);
-    fs::create_dir_all(dir_path.clone()).map_err(|e| AppError::UnknownError(anyhow!(e)))?;
+    info!("Creating directory if not existed: {:?}", repo_dir);
+    fs::create_dir_all(repo_dir.clone()).map_err(|e| AppError::UnknownError(anyhow!(e)))?;
 
     // TODO: pull the repo if the repo is existed, for now we just clear the repo and reclone
-    if is_directory_empty(&dir_path) {
+    if is_directory_empty(&repo_dir) {
         // Execute the `git clone` command
         let output = Command::new("git")
-            .args(&["clone", &repo_uri, dir_path.as_os_str().to_str().unwrap()])
+            .args(&["clone", &repo_uri, repo_dir.as_os_str().to_str().unwrap()])
             .output()
             .expect("Failed to execute 'git clone' command");
 
@@ -79,7 +76,7 @@ pub fn clone_or_pull_repo(repo_uri: &str) -> Result<PathBuf, AppError> {
         }
     }
 
-    Ok(dir_path)
+    Ok(repo_dir)
 }
 
 pub fn find_all_contracts<P>(repo_dir: P) -> Result<Vec<Contract>, AppError>
@@ -106,28 +103,6 @@ where
         .build()?;
 
     let contracts = ContractResolver::get_contracts_from_project(&project).unwrap();
-
-    // // trying to parse foundry.toml
-    // let project_path_config = parse_foundry_config(foundry_config_path)?;
-    // let artifact_dir = project_path_config.artifacts;
-
-    // for entry in WalkDir::new(project_path_config.sources)
-    //     .into_iter()
-    //     .filter_map(|entry| entry.ok())
-    // {
-    //     if let Some(file_name) = entry.file_name().to_str() {
-    //         if file_name.ends_with(".sol") && entry.file_type().is_file() {
-    //             // parse bytecode from build dir
-    //             let artifact_dir = artifact_dir.join(file_name);
-    //             let mut c = get_contract(artifact_dir)?;
-    //             result.extend(c);
-    //         }
-    //     }
-    // }
-
-    // // sort contracts by type
-    // result.sort_by(|a, b| a.partial_cmp(b).unwrap());
-
     Ok(contracts)
 }
 
@@ -161,50 +136,6 @@ where
         return Err(AppError::UnknownError(anyhow!(error_message.to_string())));
     }
     Ok(())
-}
-
-fn get_contract<P>(artifact_dir: P) -> Result<Vec<Contract>, AppError>
-where
-    P: AsRef<Path>,
-{
-    let mut result: Vec<Contract> = vec![];
-
-    let artifact_dir = artifact_dir.as_ref().to_path_buf();
-    // info!("Parsing {:?}", artifact_dir);
-    for entry in WalkDir::new(artifact_dir)
-        .into_iter()
-        .filter_map(|entry| entry.ok())
-    {
-        if let Some(file_name) = entry.file_name().to_str() {
-            if file_name.ends_with(".json") && entry.file_type().is_file() {
-                // info!("Parsing artifact {:?}", entry.path());
-                let contract_name = Project::<ConfigurableArtifacts>::contract_name(entry.path());
-                // info!("contract_name {:?}", contract_name);
-                let artifact = Project::<ConfigurableArtifacts>::read_cached_artifact(entry.path());
-                if contract_name.is_some() && artifact.is_ok() {
-                    let contract_name = contract_name.unwrap();
-                    let artifact = artifact.unwrap();
-                    let contract_bytecode = artifact.get_contract_bytecode();
-                    let bytecode = contract_bytecode.clone().bytecode;
-                    if let Some(b) = bytecode {
-                        let bytecode = b.object.as_bytes();
-                        // info!("bytecode {:?}", bytecode);
-                        let bytecode_str = bytecode.unwrap_or(&Bytes::new()).to_string();
-                        let contract_bytecode = ContractBytecode::from(bytecode_str);
-                        let contract_kind = ContractKind::from(contract_bytecode);
-
-                        result.push(Contract {
-                            name: contract_name,
-                            kind: contract_kind,
-                            version: semver::Version::new(1, 0, 0),
-                            imported_contracts: vec![],
-                        })
-                    }
-                }
-            }
-        }
-    }
-    Ok(result)
 }
 
 fn parse_foundry_config<P>(file_path: P) -> Result<ProjectPathsConfig, AppError>

@@ -2,7 +2,7 @@ use crate::errors::AppError;
 use crate::types::{Contest, ContestStatus};
 use futures::stream::StreamExt;
 use lazy_static::lazy_static;
-use paris::info;
+use rr_logging::info;
 use std::sync::Arc;
 use std::time::Duration;
 

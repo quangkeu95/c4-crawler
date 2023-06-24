@@ -19,7 +19,6 @@ failure = "0.1.8"
 futures = "0.3.28"
 headless_chrome = {version = "1.0.5", features = ["fetch"]}
 lazy_static = "1.4.0"
-paris = {version = "1.5.15", features = ["macros"]}
 rayon = "1.7.0"
 reqwest = "0.11.18"
 semver = "1.0.17"
@@ -29,6 +28,8 @@ thiserror = "1.0.40"
 tokio = { version = "1.28.2", features = ["full"]}
 toml = "0.7.4"
 walkdir = "2.3.3"
+
+rr-logging = { version = "0.1.0", git = "https://github.com/quangkeu95/rusty-robin", branch = "develop"}
 
 [dev-dependencies]
 claims = "0.7"

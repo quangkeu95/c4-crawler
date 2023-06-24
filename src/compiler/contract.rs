@@ -6,14 +6,13 @@ use ethers_solc::{
     cache::SolFilesCache,
     Artifact, ArtifactOutput, ConfigurableArtifacts, Project,
 };
-use paris::info;
 use rayon::prelude::*;
+use rr_logging::info;
 use semver::Version;
 
 use crate::{
     errors::AppError,
     types::{Contract, ContractBytecode, ContractFromArtifact, ContractKind},
-    utils::files_with_extension_from_dir,
 };
 
 pub struct ContractResolver {}

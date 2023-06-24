@@ -7,8 +7,8 @@ use ethers_solc::{
     cache::{CacheEntry, SolFilesCache},
     ArtifactOutput, ConfigurableArtifacts, ConfigurableContractArtifact, Project,
 };
-use paris::info;
 use rayon::prelude::*;
+use rr_logging::info;
 use semver::Version;
 use serde::Deserialize;
 use std::{

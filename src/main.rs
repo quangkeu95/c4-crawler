@@ -1,7 +1,9 @@
-use c4_crawler::compiler::{clone_or_pull_repo, compile, find_all_contracts};
+use c4_crawler::compiler::{
+    clone_or_pull_repo, find_all_contracts, project_dir_from_uri, ProjectType,
+};
 use c4_crawler::crawler::{fetch_all_contests, C4_CONTEST_URI};
 use c4_crawler::types::{Contest, Contract};
-use paris::{error, info};
+use rr_logging::{error, info, init_tracing};
 use std::collections::HashMap;
 use std::fs;
 use std::path::Path;
@@ -9,6 +11,9 @@ use std::process::Command;
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
+    std::env::set_var("RUST_LOG", "info,headless_chrome=error");
+    init_tracing(None);
+
     info!("Starting...");
 
     let all_contests = fetch_all_contests(C4_CONTEST_URI).await?;
@@ -18,9 +23,14 @@ async fn main() -> anyhow::Result<()> {
         .filter(|item| item.repo_uri.is_some())
         .collect();
 
-    // let mut result: HashMap<String, Vec<Contract>> = HashMap::new();
     for mut contest in contests_has_repo {
+        info!("Contest name {:#?}", contest.name);
         let repo_uri = contest.repo_uri.unwrap();
+        let repo_dir = project_dir_from_uri(&repo_uri);
+
+        let project_type = ProjectType::from_repo_dir(&repo_dir);
+        info!("Project type {:?}", project_type);
+
         let repo_dir = clone_or_pull_repo(&repo_uri).map_err(|e| {
             error!("Clone repo error: {e:?}");
             e
@@ -36,7 +46,6 @@ async fn main() -> anyhow::Result<()> {
             info!("Contract {:#?}", contract);
         }
 
-        // result.insert(repo_uri, all_contracts);
         contest.contracts = all_contracts;
     }
 
