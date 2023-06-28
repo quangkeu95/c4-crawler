@@ -43,5 +43,6 @@ pub fn project_dir_from_uri(repo_uri: &str) -> PathBuf {
     let dir_path = PathBuf::from(env::current_dir().unwrap())
         .join("contests")
         .join(dir_name);
+
     dir_path
 }

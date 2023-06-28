@@ -1,8 +1,9 @@
 use super::Contract;
+use derive_builder::Builder;
 use derive_more::{From, Into};
 use std::path::Path;
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Builder)]
 pub struct Contest {
     pub name: String,
     pub description: String,
@@ -15,7 +16,7 @@ pub struct Contest {
     pub contracts: Vec<Contract>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum ContestStatus {
     Ongoing,
     Upcoming,
