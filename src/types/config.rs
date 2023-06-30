@@ -14,4 +14,7 @@ pub struct FoundryConfigProfile {
 pub struct FoundryConfigProfileDefault {
     pub src: Option<String>,
     pub libs: Option<Vec<String>>,
+    pub test: Option<String>,
+    pub cache_path: Option<String>,
+    pub out: Option<String>,
 }

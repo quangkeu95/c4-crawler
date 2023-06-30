@@ -19,36 +19,31 @@ async fn main() -> anyhow::Result<()> {
 
     let all_contests = fetch_all_contests().await?;
 
-    let contests_has_repo: Vec<Contest> = all_contests
-        .into_iter()
-        .filter(|item| item.repo_uri.is_some())
-        .collect();
-
-    for mut contest in contests_has_repo {
+    for mut contest in all_contests {
         info!("Contest {:#?}", contest);
         let repo_uri = contest.repo_uri.unwrap();
         let repo_dir = project_dir_from_uri(&repo_uri);
         info!("Repo directory {:#?}", repo_dir);
 
-        let project_type = ProjectType::from_repo_dir(&repo_dir);
-        info!("Project type {:?}", project_type);
-
-        if let Err(_e) = clone_or_pull_repo(&repo_uri).map_err(|e| {
+        if let Err(e) = clone_or_pull_repo(&repo_uri) {
             error!("Clone repo error: {e:?}");
-            e
-        }) {
             continue;
         };
 
-        let all_contracts = find_all_contracts(repo_dir).map_err(|e| {
-            error!("Find all contracts error {e:?}");
-            e
-        })?;
+        let all_contracts = match find_all_contracts(repo_dir) {
+            Ok(result) => result,
+            Err(e) => {
+                error!("Find all contracts error {e:?}");
+                continue;
+            }
+        };
 
-        info!("Repo name {:?}", repo_uri);
-        for contract in all_contracts.iter() {
-            info!("Contract {:#?}", contract);
-        }
+        info!("Found {:#?} contracts", all_contracts.len());
+
+        // info!("Repo name {:?}", repo_uri);
+        // for contract in all_contracts.iter() {
+        //     info!("Contract {:#?}", contract);
+        // }
 
         contest.contracts = all_contracts;
     }

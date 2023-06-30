@@ -3,15 +3,17 @@ use crate::types::{Contest, ContestStatus};
 use futures::stream::StreamExt;
 use headless_chrome::{Browser, Element, Tab};
 use lazy_static::lazy_static;
-use rr_logging::{error, info, instrument, tracing};
+use rr_logging::{error, info, instrument, tracing, warn};
 use std::sync::Arc;
 use std::time::Duration;
 
 use self::codearena::CodearenaCrawler;
 use self::sherlock::SherlockCrawler;
+use self::utils::is_repo_private;
 
 pub mod codearena;
 pub mod sherlock;
+pub mod utils;
 
 #[async_trait::async_trait]
 pub trait ContestCrawler {
@@ -46,7 +48,22 @@ pub async fn fetch_all_contests() -> Result<Vec<Contest>, AppError> {
             error!("Error fetching contests {:#?}", e);
             continue;
         }
-        result.extend(response.unwrap());
+
+        // filter out private contests
+        let contests = response.unwrap();
+        for contest in contests {
+            if contest.repo_uri.is_none() {
+                warn!("Skipping private contest {:#?}", contest.name);
+                continue;
+            }
+
+            let repo_uri = contest.repo_uri.as_ref().unwrap();
+            if is_repo_private(&repo_uri).await.unwrap_or(true) {
+                warn!("Skipping private contest {:#?}", contest.name);
+                continue;
+            }
+            result.push(contest);
+        }
     }
     Ok(result)
 }

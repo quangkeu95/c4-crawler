@@ -105,7 +105,12 @@ impl ContractResolver {
     where
         T: ArtifactOutput,
     {
-        let solc_cache = project.read_cache_file()?;
+        let artifact_path = project.artifacts_path();
+
+        let solc_cache = project.read_cache_file().map_err(|e| {
+            println!("{:#?}", e);
+            e
+        })?;
         let project_root = project.root();
         let source_files: Vec<PathBuf> = solc_cache
             .files
@@ -154,6 +159,8 @@ impl ContractResolver {
                     .unwrap()
                     .to_string_lossy()
                     .to_string();
+
+                let test = cache_entry.find_artifact_path(&name);
 
                 let artifact =
                     Project::<ConfigurableArtifacts>::read_cached_artifact(artifact_file).ok();

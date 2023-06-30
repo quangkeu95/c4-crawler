@@ -2,8 +2,20 @@ use std::path::PathBuf;
 
 use thiserror::Error;
 
+use crate::compiler::ProjectType;
+
 #[derive(Debug, Error)]
 pub enum AppError {
+    #[error("Resolve dependencies error {0:#?}")]
+    ResolveDependenciesError(String),
+    #[error("Project compile error {0:#?}")]
+    ProjectCompileError(String),
+    #[error("Unsupported project type {0:#?}")]
+    UnsupportedProjectType(ProjectType),
+    #[error("Parse Foundry config error {0:#?}")]
+    ParseFoundryConfigError(String),
+    #[error("Parse Hardhat config error {0:#?}")]
+    ParseHardhatConfigError(String),
     #[error(transparent)]
     TokioJoinHandleError(#[from] tokio::task::JoinError),
     #[error(transparent)]
@@ -16,6 +28,8 @@ pub enum AppError {
     DeriveBuilderUninitializedFieldError(#[from] derive_builder::UninitializedFieldError),
     #[error(transparent)]
     ReqwestError(#[from] reqwest::Error),
+    #[error(transparent)]
+    StdIoError(#[from] std::io::Error),
     #[error(transparent)]
     UnknownError(#[from] anyhow::Error),
 }
